@@ -1,0 +1,52 @@
+service: iotdata-over-ws
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  region: eu-central-1
+  websocketsApiName: iot-over-ws
+  websocketsApiRouteSelectionExpression: $request.body.action
+  websocketsDescription: Serverless Websockets for Iot Data
+
+plugins:
+  - serverless-iam-roles-per-function
+
+functions:
+  plcIot:
+    handler: handlers/plc-next-event.handleEvent
+    events:
+      - iot:
+          name: 'PLCNextEvent'
+          description: A PLCNext event
+          sql: SELECT * FROM 'readOperationalParams'
+      - websocket:
+          route: message
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - ssm:PutParameter
+          - ssm:AddTagsToResource
+        Resource:
+          - "*"
+
+  wsConnectionHandler:
+    handler: handlers/ws-connection.handleEvent
+    events:
+      - websocket:
+          route: $connect
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - ssm:PutParameter
+          - ssm:AddTagsToResource
+        Resource:
+          - "*"
+
+resources:
+  Resources:
+    ParameterStore:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Type: String
+        Value: String
+    

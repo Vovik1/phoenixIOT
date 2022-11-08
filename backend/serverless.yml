@@ -1,0 +1,87 @@
+service: phoenixIOT-backend
+frameworkVersion: '3'
+
+plugins:
+  - serverless-iam-roles-per-function
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  region: eu-central-1
+  tracing:
+    apiGateway: true
+    lambda: true
+  environment:
+    BASE_URL: https://${self:custom.domainName}
+    TABLE_NAME: !Ref Table
+
+custom:
+  domainName: smartphoenix.click
+
+
+functions:
+  temperatureAll:
+    handler: handlers/all-temperatures.handleEvent
+    events:
+      - httpApi:
+          method: GET
+          path: "/"
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - !Sub "${Table.Arn}/*"
+
+resources:
+
+  Resources:
+    CustomDomain:
+      Type: AWS::ApiGatewayV2::DomainName
+      Properties:
+        DomainName: ${self:custom.domainName}
+        DomainNameConfigurations:
+          - CertificateArn: ${cf:domain-${sls:stage}.DomainCertArn}
+    
+    DomainRecordSet:
+      Type: AWS::Route53::RecordSetGroup
+      Properties:
+        HostedZoneId: ${cf:domain-${sls:stage}.PublicHostedZone}
+        RecordSets:
+          - Name: ${self:custom.domainName}
+            Type: A
+            AliasTarget:
+              DNSName: !GetAtt CustomDomain.RegionalDomainName
+              HostedZoneId: !GetAtt CustomDomain.RegionalHostedZoneId
+          - Name: ${self:custom.domainName}
+            Type: AAAA
+            AliasTarget:
+              DNSName: !GetAtt CustomDomain.RegionalDomainName
+              HostedZoneId: !GetAtt CustomDomain.RegionalHostedZoneId
+
+    CustomDomainPathMapping:
+      Type: AWS::ApiGatewayV2::ApiMapping
+      Properties:
+        ApiId: !Ref HttpApi
+        ApiMappingKey: "data"
+        DomainName: !Ref CustomDomain
+        Stage: !Ref HttpApiStage
+
+    Table:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          AttributeDefinitions:
+            - AttributeName: plc_id
+              AttributeType: S 
+            - AttributeName: timestamp
+              AttributeType: S
+          KeySchema:
+            - AttributeName: plc_id
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+          TableName: "PhoenixTable"
+       
