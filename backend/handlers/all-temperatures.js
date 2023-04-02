@@ -14,25 +14,31 @@ const ddbClient = new DynamoDBClient()
 const docClient = DynamoDBDocument.from(ddbClient)
 
 async function handler (event, context) {
-  const params = {
-    TableName: TABLE_NAME,
-    KeyConditionExpression: 'plc_id = :id and #tmp between :t1 and :t2',
-    ExpressionAttributeNames: {
-      '#tmp': 'timestamp'
-    },
-    ExpressionAttributeValues: {
-      ':id': '4',
-      ':t1': '2021-03-04T16:57:50.204Z',
-      ':t2': '2021-03-04T17:08:19.495Z'
-    }
-  }
 
-  try {
-    const data = await docClient.query(params)
-    return { statusCode: 200, data }
-  } catch (err) {
-    logger.error({ err })
+  return {
+    statusCode: 200, body: JSON.stringify({message: "You are allrigth"})
   }
+  // const params = {
+  //   TableName: TABLE_NAME,
+  //   KeyConditionExpression: 'plc_id = :id and #tmp between :t1 and :t2',
+  //   ExpressionAttributeNames: {
+  //     '#tmp': 'timestamp'
+  //   },
+  //   ExpressionAttributeValues: {
+  //     ':id': '4',
+  //     ':t1': '2021-03-04T16:57:50.204Z',
+  //     ':t2': '2021-03-04T17:08:19.495Z'
+  //   }
+  // }
+
+
+
+  // try {
+  //   const data = await docClient.query(params)
+  //   return { statusCode: 200, data }
+  // } catch (err) {
+  //   logger.error({ err })
+  // }
 }
 
 export const handleEvent = middy(handler)

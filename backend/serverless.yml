@@ -1,4 +1,4 @@
-service: phoenixIOT-backend
+service: ${file(../config.cjs):config.serviceName}-backend
 frameworkVersion: '3'
 
 plugins:
@@ -7,7 +7,8 @@ plugins:
 provider:
   name: aws
   runtime: nodejs16.x
-  region: eu-central-1
+  stage: ${file(../config.cjs):config.stage}
+  region: ${file(../config.cjs):config.region}
   tracing:
     apiGateway: true
     lambda: true
@@ -16,7 +17,7 @@ provider:
     TABLE_NAME: !Ref Table
 
 custom:
-  domainName: smartphoenix.click
+  domainName: ${file(../config.cjs):config.domain}
 
 
 functions:
@@ -34,37 +35,13 @@ functions:
           - !Sub "${Table.Arn}/*"
 
 resources:
-
   Resources:
-    CustomDomain:
-      Type: AWS::ApiGatewayV2::DomainName
-      Properties:
-        DomainName: ${self:custom.domainName}
-        DomainNameConfigurations:
-          - CertificateArn: ${cf:domain-${sls:stage}.DomainCertArn}
-    
-    DomainRecordSet:
-      Type: AWS::Route53::RecordSetGroup
-      Properties:
-        HostedZoneId: ${cf:domain-${sls:stage}.PublicHostedZone}
-        RecordSets:
-          - Name: ${self:custom.domainName}
-            Type: A
-            AliasTarget:
-              DNSName: !GetAtt CustomDomain.RegionalDomainName
-              HostedZoneId: !GetAtt CustomDomain.RegionalHostedZoneId
-          - Name: ${self:custom.domainName}
-            Type: AAAA
-            AliasTarget:
-              DNSName: !GetAtt CustomDomain.RegionalDomainName
-              HostedZoneId: !GetAtt CustomDomain.RegionalHostedZoneId
-
     CustomDomainPathMapping:
       Type: AWS::ApiGatewayV2::ApiMapping
       Properties:
         ApiId: !Ref HttpApi
-        ApiMappingKey: "data"
-        DomainName: !Ref CustomDomain
+        ApiMappingKey: "share"
+        DomainName: ${self:custom.domainName}
         Stage: !Ref HttpApiStage
 
     Table:
